@@ -241,8 +241,10 @@ export class KeyExampleFactory {
 export class UIExampleFactory {
   // 是否显示分类右键菜单
   static displayColMenuitem() {
-    const collection = ZoteroPane.getSelectedCollection(),
-      //items = collection.getChildItems(),
+    const collections = typeof ZoteroPane.getSelectedCollections === 'function'
+      ? ZoteroPane.getSelectedCollections()
+      : [ZoteroPane.getSelectedCollection()].filter(Boolean),
+
       menuDelCol = document.getElementById(
         "zotero-collectionmenu-delitemwithatt-del-item-att",
       ), // 删除分类及附件菜单
@@ -252,17 +254,17 @@ export class UIExampleFactory {
 
     // 非正常文件夹，如我的出版物、重复条目、未分类条目、回收站，为false，此时返回值为true，禁用菜单
     // 两个！！转表达式为逻辑值
-    var showMenuDelCol = !!collection;
+    var showMenuDelCol = collections.length > 0;
     //ztoolkit.getGlobal("alert")(`Selected ${showMenuDelCol}`);
 
-    if (!!collection) {
+    if (collections.length) {
       // 如果是正常分类才显示
-      var items = collection.getChildItems();
-      var showmenuExpColAtt = items.some((item) =>
+      var items = collections.flatMap((c: Zotero.Collection) => c.getChildItems());
+      var showmenuExpColAtt = items.some((item: Zotero.Item) =>
         HelperExampleFactory.checkItemAtt(item),
       );
     } else {
-      var showmenuExpColAtt = false;
+      showmenuExpColAtt = false;
     } // 检查分类是否有附件及是否为正常分类
     menuDelCol?.setAttribute("disabled", String(!showMenuDelCol)); // 禁用导出附件
     // menuDelCol?.setAttribute('disabled', `${!showMenuDelCol}`); // 禁用导出附件
@@ -603,22 +605,28 @@ export class HelperExampleFactory {
 
   //删除分类条目包括附件
   static async delColItemAtt() {
-    var collection = ZoteroPane.getSelectedCollection();
-    var items = collection!.getChildItems();
+    const collections = typeof ZoteroPane.getSelectedCollections === 'function'
+      ? ZoteroPane.getSelectedCollections()
+      : [ZoteroPane.getSelectedCollection()].filter(Boolean);
+    const items = collections.flatMap((c: Zotero.Collection) => c.getChildItems());
     var truthBeTold = window.confirm(
       getString("delete-collection-and-attachment"),
     );
     if (truthBeTold) {
       HelperExampleFactory.delAttDo(items); //删除条目
-      await collection!.eraseTx();
+      for (const c of collections as Zotero.Collection[]) {
+        await c.eraseTx();
+      }
     }
     BasicExampleFactory.delColItemAttSucess();
   }
 
   //导出分类附件
   static async colExpAtt() {
-    var collection = ZoteroPane.getSelectedCollection();
-    var items = collection!.getChildItems();
+    const collections = typeof ZoteroPane.getSelectedCollections === 'function'
+    ? ZoteroPane.getSelectedCollections()
+    : [ZoteroPane.getSelectedCollection()].filter(Boolean);
+    const items = collections.flatMap((c: Zotero.Collection) => c.getChildItems());
     await HelperExampleFactory.expAttDo(items);
     // BasicExampleFactory.exortSucess(); // 导出成功提示
   }
