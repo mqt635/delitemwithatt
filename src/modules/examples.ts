@@ -617,8 +617,8 @@ export class HelperExampleFactory {
       for (const c of collections as Zotero.Collection[]) {
         await c.eraseTx();
       }
+      BasicExampleFactory.delColItemAttSucess();
     }
-    BasicExampleFactory.delColItemAttSucess();
   }
 
   //导出分类附件
