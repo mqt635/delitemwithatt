@@ -1,7 +1,7 @@
 
 # Delete item(s) with attachment(s)
 
-[![zotero target version](https://img.shields.io/badge/Zotero-7.*/8.*-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
+[![zotero target version](https://img.shields.io/badge/Zotero-7/8/9/10-green?style=flat-square&logo=zotero&logoColor=CC2936)](https://www.zotero.org)
 [![version](https://img.shields.io/github/package-json/v/redleafnew/delitemwithatt?style=flat-square)](https://github.com/redleafnew/delitemwithatt/releases/)
 [![download number](https://img.shields.io/github/downloads/redleafnew/delitemwithatt/latest/total?style=flat-square)](https://github.com/redleafnew/delitemwithatt/releases/)
 [![license](https://img.shields.io/github/license/redleafnew/delitemwithatt?style=flat-square)](#license)
