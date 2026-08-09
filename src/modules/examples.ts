@@ -608,14 +608,13 @@ export class HelperExampleFactory {
     const collections = typeof ZoteroPane.getSelectedCollections === 'function'
       ? ZoteroPane.getSelectedCollections()
       : [ZoteroPane.getSelectedCollection()].filter(Boolean);
-    const items = collections.flatMap((c: Zotero.Collection) => c.getChildItems());
     var truthBeTold = window.confirm(
       getString("delete-collection-and-attachment"),
     );
     if (truthBeTold) {
-      HelperExampleFactory.delAttDo(items); //删除条目
       for (const c of collections as Zotero.Collection[]) {
-        await c.eraseTx();
+        c.deleted = true;
+        await c.saveTx({ deleteItems: true } as any);
       }
       BasicExampleFactory.delColItemAttSucess();
     }
