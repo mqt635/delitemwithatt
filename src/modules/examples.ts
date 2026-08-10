@@ -1,11 +1,12 @@
 import { config } from "../../package.json";
 import { getString } from "../utils/locale";
+const { OS } = ChromeUtils.importESModule("chrome://zotero/content/osfile.mjs"); //使用OS.File.removeEmptyDir
 import { getPref } from "../utils/prefs";
 
 function example(
   target: any,
   propertyKey: string | symbol,
-  descriptor: PropertyDescriptor
+  descriptor: PropertyDescriptor,
 ) {
   const original = descriptor.value;
   descriptor.value = function (...args: any) {
@@ -15,7 +16,6 @@ function example(
     } catch (e) {
       ztoolkit.log(`Error in example ${target.name}.${String(propertyKey)}`, e);
       throw e;
-
     }
   };
   return descriptor;
@@ -38,7 +38,7 @@ export class BasicExampleFactory {
   static exortSucess(nSucess: number) {
     new ztoolkit.ProgressWindow(config.addonName)
       .createLine({
-        text: nSucess + ' ' + getString("exp-sucess"),
+        text: nSucess + " " + getString("exp-sucess"),
         type: "success",
         progress: 100,
       })
@@ -49,7 +49,7 @@ export class BasicExampleFactory {
   static exortFail(nFail: number) {
     new ztoolkit.ProgressWindow(config.addonName)
       .createLine({
-        text: nFail + ' ' + getString("exp-fail"),
+        text: nFail + " " + getString("exp-fail"),
         type: "fail",
         progress: 100,
       })
@@ -85,7 +85,9 @@ export class BasicExampleFactory {
     // var items = Zotero.getActiveZoteroPane().getSelectedItems();
     new ztoolkit.ProgressWindow(config.addonName)
       .createLine({
-        text: getString("del-item-att-sucess", { args: { count: items.length } }),
+        text: getString("del-item-att-sucess", {
+          args: { count: items.length },
+        }),
         type: "success",
         progress: 100,
       })
@@ -154,11 +156,9 @@ export class BasicExampleFactory {
 }
 
 export class KeyExampleFactory {
-
   // modifiers逗号分隔，shift就是shift，ctrl跨平台是accel
   // @example
   // static registerShortcuts() {
-
   //   // 修改后重启生效
   //   // 删除条目和附件默认快捷键:Alt+I
   //   var key_del_item_att = getPref('key.del.item.att') == undefined ? 'I' : getPref('key.del.item.att');
@@ -172,9 +172,6 @@ export class KeyExampleFactory {
   //   var key_del_extra = getPref('key.del.extra') == undefined ? 'X' : getPref('key.del.extra');
   //   // 仅删除摘要默认快捷键.Alt+Z
   //   var key_del_abs = getPref('key.del.abs') == undefined ? 'Z' : getPref('key.del.abs');
-
-
-
   //   // 删除条目和附件快捷键:Alt+I
   //   ztoolkit.Shortcut.register("event", {
   //     id: `${config.addonRef}-key-del-item-att`,
@@ -184,18 +181,15 @@ export class KeyExampleFactory {
   //       HelperExampleFactory.delItemAtt();
   //     },
   //   });
-
   //   // 删除附件快捷键.Alt+A
   //   ztoolkit.Shortcut.register("event", {
   //     id: `${config.addonRef}-key-del-att`,
   //     key: key_del_att as string,
   //     modifiers: "alt",
   //     callback: (keyOptions) => {
-
   //       HelperExampleFactory.delAtt();
   //     },
   //   });
-
   //   //仅删除快照快捷键 Alt+S
   //   ztoolkit.Shortcut.register("event", {
   //     id: `${config.addonRef}-key-del-snap`,
@@ -205,7 +199,6 @@ export class KeyExampleFactory {
   //       HelperExampleFactory.delSnap();
   //     },
   //   });
-
   //   //删除笔记快捷键Alt+N
   //   ztoolkit.Shortcut.register("event", {
   //     id: `${config.addonRef}-key-del-note`,
@@ -215,7 +208,6 @@ export class KeyExampleFactory {
   //       HelperExampleFactory.delNote();
   //     },
   //   });
-
   //   // 删除其它要快捷键 Alt+X
   //   ztoolkit.Shortcut.register("event", {
   //     id: `${config.addonRef}-key-del-extra`,
@@ -225,7 +217,6 @@ export class KeyExampleFactory {
   //       HelperExampleFactory.delExtra();
   //     },
   //   });
-
   //   // 删除摘要快捷键Alt+Z
   //   ztoolkit.Shortcut.register("event", {
   //     id: `${config.addonRef}-key-del-abs`,
@@ -235,7 +226,6 @@ export class KeyExampleFactory {
   //       HelperExampleFactory.delAbstract();
   //     },
   //   });
-
   //   //删除摘要快捷键Alt+Z
   //   // ztoolkit.Shortcut.register("event", {
   //   //   id: `${config.addonRef}-key-del-abs`,
@@ -246,61 +236,96 @@ export class KeyExampleFactory {
   //   //   },
   //   // });
   // }
-
 }
 
 export class UIExampleFactory {
-
   // 是否显示分类右键菜单
   static displayColMenuitem() {
-    const collection = ZoteroPane.getSelectedCollection(),
-      //items = collection.getChildItems(),
-      menuDelCol = document.getElementById('zotero-collectionmenu-delitemwithatt-del-item-att'), // 删除分类及附件菜单
-      menuExpColAtt = document.getElementById('zotero-collectionmenu-delitemwithatt-export-att'); // 导出分类附件菜单
+    const collections = typeof ZoteroPane.getSelectedCollections === 'function'
+      ? ZoteroPane.getSelectedCollections()
+      : [ZoteroPane.getSelectedCollection()].filter(Boolean),
+
+      menuDelCol = document.getElementById(
+        "zotero-collectionmenu-delitemwithatt-del-item-att",
+      ), // 删除分类及附件菜单
+      menuExpColAtt = document.getElementById(
+        "zotero-collectionmenu-delitemwithatt-export-att",
+      ); // 导出分类附件菜单
 
     // 非正常文件夹，如我的出版物、重复条目、未分类条目、回收站，为false，此时返回值为true，禁用菜单
     // 两个！！转表达式为逻辑值
-    var showMenuDelCol = !!collection;
+    var showMenuDelCol = collections.length > 0;
     //ztoolkit.getGlobal("alert")(`Selected ${showMenuDelCol}`);
 
-    if (!!collection) { // 如果是正常分类才显示
-      var items = collection.getChildItems();
-      var showmenuExpColAtt = items.some((item) => HelperExampleFactory.checkItemAtt(item));
+    if (collections.length) {
+      // 如果是正常分类才显示
+      var items = collections.flatMap((c: Zotero.Collection) => c.getChildItems());
+      var showmenuExpColAtt = items.some((item: Zotero.Item) =>
+        HelperExampleFactory.checkItemAtt(item),
+      );
     } else {
-      var showmenuExpColAtt = false;
+      showmenuExpColAtt = false;
     } // 检查分类是否有附件及是否为正常分类
-    menuDelCol?.setAttribute('disabled', String(!showMenuDelCol)); // 禁用导出附件
+    menuDelCol?.setAttribute("disabled", String(!showMenuDelCol)); // 禁用导出附件
     // menuDelCol?.setAttribute('disabled', `${!showMenuDelCol}`); // 禁用导出附件
-    menuExpColAtt?.setAttribute('disabled', String(!showmenuExpColAtt)); // 禁用删除附件
+    menuExpColAtt?.setAttribute("disabled", String(!showmenuExpColAtt)); // 禁用删除附件
   }
 
   // 是否显示条目右键菜单
   static displayMenuitem() {
     const items = ZoteroPane.getSelectedItems(),
-      menuChanLan = document.getElementById('zotero-itemmenu-delitemwithatt-chan-lan'), // 修改语言菜单
-      menuExpAtt = document.getElementById('zotero-itemmenu-delitemwithatt-export-att'), // 导出附件菜单
-      menuDelAtt = document.getElementById('zotero-itemmenu-delitemwithatt-del-att'), // 导出附件菜单
-      menuDelSnap = document.getElementById('zotero-itemmenu-delitemwithatt-del-snap'), // 删除快照
-      menuDelNote = document.getElementById('zotero-itemmenu-delitemwithatt-del-note'), // 删除笔记
-      menuDelExtra = document.getElementById('zotero-itemmenu-delitemwithatt-del-extra'), // 删除其它
-      menuDelAbs = document.getElementById('zotero-itemmenu-delitemwithatt-del-abs'), // 删除摘要
-
-
-      showMenuChanLan = items.some((item) => HelperExampleFactory.checkIsRegularItem(item)),// 检查是否为正常条目
-      showMenuAtt = items.some((item) => HelperExampleFactory.checkItemAtt(item)), // 检查附件
-      showMenuSnap = items.some((item) => HelperExampleFactory.checkItemSnap(item)),  // 检查快照
-      showMenuNote = items.some((item) => HelperExampleFactory.checkItemNote(item)),  // 检查笔记
-      showMenuExtra = items.some((item) => HelperExampleFactory.checkItemExtra(item)),  // 检查其它内容
-      showMenuAbstract = items.some((item) => HelperExampleFactory.checkItemAbstract(item));  // 检查摘要
+      menuChanLan = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-chan-lan",
+      ), // 修改语言菜单
+      menuExpAtt = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-export-att",
+      ), // 导出附件菜单
+      menuDelItemAtt = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-del-item-att",
+      ), // 删除条目附件菜单
+      menuDelAtt = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-del-att",
+      ), // 删除附件菜单
+      menuDelSnap = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-del-snap",
+      ), // 删除快照
+      menuDelNote = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-del-note",
+      ), // 删除笔记
+      menuDelExtra = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-del-extra",
+      ), // 删除其它
+      menuDelAbs = document.getElementById(
+        "zotero-itemmenu-delitemwithatt-del-abs",
+      ), // 删除摘要
+      showMenuChanLan = items.some((item) =>
+        HelperExampleFactory.checkIsRegularItem(item),
+      ), // 检查是否为正常条目
+      showMenuAtt = items.some((item) =>
+        HelperExampleFactory.checkItemAtt(item),
+      ), // 检查附件
+      showMenuSnap = items.some((item) =>
+        HelperExampleFactory.checkItemSnap(item),
+      ), // 检查快照
+      showMenuNote = items.some((item) =>
+        HelperExampleFactory.checkItemNote(item),
+      ), // 检查笔记
+      showMenuExtra = items.some((item) =>
+        HelperExampleFactory.checkItemExtra(item),
+      ), // 检查其它内容
+      showMenuAbstract = items.some((item) =>
+        HelperExampleFactory.checkItemAbstract(item),
+      ); // 检查摘要
 
     //menu.setAttribute('hidden', 'true');
-    menuChanLan?.setAttribute('disabled', `${!showMenuChanLan}`); // 禁用修改语言
-    menuExpAtt?.setAttribute('disabled', `${!showMenuAtt}`); // 禁用导出附件
-    menuDelAtt?.setAttribute('disabled', String(!showMenuAtt)); // 禁用删除附件
-    menuDelSnap?.setAttribute('disabled', String(!showMenuSnap)); // 禁用删除快照
-    menuDelNote?.setAttribute('disabled', String(!showMenuNote)); // 禁用删除笔记
-    menuDelExtra?.setAttribute('disabled', String(!showMenuExtra)); // 禁用删除其它
-    menuDelAbs?.setAttribute('disabled', String(!showMenuAbstract)); // 禁用删除摘要
+    menuChanLan?.setAttribute("disabled", `${!showMenuChanLan}`); // 禁用修改语言
+    menuExpAtt?.setAttribute("disabled", `${!showMenuAtt}`); // 禁用导出附件
+    menuDelItemAtt?.setAttribute("disabled", String(!showMenuChanLan)); // 禁用删除条目附件
+    menuDelAtt?.setAttribute("disabled", String(!showMenuAtt)); // 禁用删除附件
+    menuDelSnap?.setAttribute("disabled", String(!showMenuSnap)); // 禁用删除快照
+    menuDelNote?.setAttribute("disabled", String(!showMenuNote)); // 禁用删除笔记
+    menuDelExtra?.setAttribute("disabled", String(!showMenuExtra)); // 禁用删除其它
+    menuDelAbs?.setAttribute("disabled", String(!showMenuAbstract)); // 禁用删除摘要
   }
   // 分隔条
   @example
@@ -313,8 +338,14 @@ export class UIExampleFactory {
   // 分类右键菜单：删除分类及附件，导出附件
   @example
   static registerRightClickCollMenu() {
-    const exportIcon = `chrome://${config.addonRef}/content/icons/export.png`,
-      delColIcon = `chrome://${config.addonRef}/content/icons/favicon@0.5x.png`;
+    const exportIcon = `chrome://${config.addonRef}/content/icons/export.svg`;
+    const delColIcon = `chrome://${config.addonRef}/content/icons/favicon.svg`;
+    // 分类右键菜单分割线
+    ztoolkit.Menu.register("collection", {
+      tag: "menuseparator",
+      id: "zotero-itemmenu-delitemwithatt-separator",
+    });
+
     // 删除分类及附件菜单
     ztoolkit.Menu.register("collection", {
       tag: "menuitem",
@@ -339,7 +370,7 @@ export class UIExampleFactory {
   // 导出附件右键菜单
   @example
   static registerRightClickMenuItem() {
-    const exportIcon = `chrome://${config.addonRef}/content/icons/export.png`;
+    const exportIcon = `chrome://${config.addonRef}/content/icons/export.svg`;
     // item menuitem with icon 导出附件
     ztoolkit.Menu.register("item", {
       tag: "menuitem",
@@ -354,7 +385,7 @@ export class UIExampleFactory {
   // 修改语言右键菜单
   @example
   static registerRightClickChanLan() {
-    const chanLanIcon = `chrome://${config.addonRef}/content/icons/chanLan.png`;
+    const chanLanIcon = `chrome://${config.addonRef}/content/icons/chanLan.svg`;
 
     ztoolkit.Menu.register("item", {
       tag: "menuitem",
@@ -370,46 +401,54 @@ export class UIExampleFactory {
   static registerRightClickMenuPopup() {
     // 菜单组无法使用图标
     // const delIcon = `chrome://${config.addonRef}/content/icons/del.png`;
+    // 右键菜单图标
+    const delIcon = `chrome://${config.addonRef}/content/icons/favicon.svg`;
     ztoolkit.Menu.register(
       "item",
       {
         tag: "menu",
         label: getString("del-att"),
-
+        icon: delIcon,
         children: [
-          { // 删除附件和条目菜单
+          {
+            // 删除附件和条目菜单
             tag: "menuitem",
             label: getString("delitem-label"),
             id: "zotero-itemmenu-delitemwithatt-del-item-att",
             commandListener: (ev) => HelperExampleFactory.delItemAtt(),
           },
-          {// 删除附件
+          {
+            // 删除附件
             tag: "menuitem",
             label: getString("delatt-label"),
             id: "zotero-itemmenu-delitemwithatt-del-att",
             commandListener: (ev) => HelperExampleFactory.delAtt(),
           },
-          {// 删除快照
+          {
+            // 删除快照
             tag: "menuitem",
             label: getString("delsnap-label"),
             id: "zotero-itemmenu-delitemwithatt-del-snap",
             commandListener: (ev) => HelperExampleFactory.delSnap(),
           },
-          {// 删除笔记
+          {
+            // 删除笔记
             tag: "menuitem",
             label: getString("delnote-label"),
             id: "zotero-itemmenu-delitemwithatt-del-note",
             commandListener: (ev) => HelperExampleFactory.delNote(),
           },
 
-          {// 删除摘要
+          {
+            // 删除摘要
             tag: "menuitem",
             label: getString("delabstract-label"),
             id: "zotero-itemmenu-delitemwithatt-del-abs",
             commandListener: (ev) => HelperExampleFactory.delAbstract(),
           },
 
-          {// 删除其它
+          {
+            // 删除其它
             tag: "menuitem",
             label: getString("delextra-label"),
             commandListener: (ev) => HelperExampleFactory.delExtra(),
@@ -419,14 +458,13 @@ export class UIExampleFactory {
       },
       "before",
       document.querySelector(
-        "#zotero-itemmenu-delitemwithatt-export-att"
-      ) as XUL.MenuItem
+        "#zotero-itemmenu-delitemwithatt-export-att",
+      ) as XUL.MenuItem,
     );
   }
 }
 
 export class HelperExampleFactory {
-
   // 检查是否为正常条目，附件不显示修改语言
   static checkIsRegularItem(item: Zotero.Item) {
     return item && !item.isNote() && item.isRegularItem(); //条目存在，不为笔记，是正常条目
@@ -435,12 +473,14 @@ export class HelperExampleFactory {
   // 检查附件是否存在函数
   static checkItemAtt(item: Zotero.Item) {
     if (item && !item.isNote()) {
-      if (item.isRegularItem()) { // not an attachment already
+      if (item.isRegularItem()) {
+        // not an attachment already
         let attachmentIDs = item.getAttachments();
         for (let id of attachmentIDs) {
           let attachment = Zotero.Items.get(id);
           var attType = attachment.attachmentContentType;
-          if (attType != undefined) { //不等于undefined为有附件
+          if (attType != undefined) {
+            //不等于undefined为有附件
             return true;
           }
         }
@@ -454,19 +494,20 @@ export class HelperExampleFactory {
         }
       }
     }
-
   }
 
   // 检查快照是否存在函数
-  static checkItemSnap(item: Zotero.Item) { // 检查快照
+  static checkItemSnap(item: Zotero.Item) {
+    // 检查快照
     if (item && !item.isNote()) {
-      if (item.isRegularItem()) { // not an attachment already
+      if (item.isRegularItem()) {
+        // not an attachment already
         let attachmentIDs = item.getAttachments();
         for (let id of attachmentIDs) {
           let attachment = Zotero.Items.get(id);
           var attType = attachment.attachmentContentType;
           // 如果是text;/html则为快照
-          if (attType == 'text/html') {
+          if (attType == "text/html") {
             return true;
           }
         }
@@ -474,26 +515,27 @@ export class HelperExampleFactory {
       if (item.isAttachment()) {
         var attType = item.attachmentContentType;
         // 如果是text;/html则为快照
-        if (attType == 'text/html') {
+        if (attType == "text/html") {
           return true;
         } else {
           return false;
         }
       }
     }
-
-
   }
 
   // 检查笔记是否存在函数
-  static checkItemNote(item: Zotero.Item) { // 检查笔记
+  static checkItemNote(item: Zotero.Item) {
+    // 检查笔记
     if (item && !item.isNote()) {
-      if (item.isRegularItem()) { // not an attachment already
+      if (item.isRegularItem()) {
+        // not an attachment already
         var noteIDs = item.getNotes();
-        var withNote = ztoolkit.getGlobal("JSON").stringify(noteIDs) === '[]';
+        var withNote = ztoolkit.getGlobal("JSON").stringify(noteIDs) === "[]";
         if (withNote) {
           return false;
-        } else { //为假时含笔记
+        } else {
+          //为假时含笔记
           return true;
         }
       }
@@ -505,13 +547,15 @@ export class HelperExampleFactory {
   }
 
   // 检查其它内容是否存在函数
-  static checkItemExtra(item: Zotero.Item) { // 检查其它内容
+  static checkItemExtra(item: Zotero.Item) {
+    // 检查其它内容
     if (item && !item.isNote()) {
-      if (item.isRegularItem()) { // not an attachment already
-        var extra = item.getField('extra')
-        var withExtra = extra === '';
+      if (item.isRegularItem()) {
+        // not an attachment already
+        var extra = item.getField("extra");
+        var withExtra = extra === "";
         if (withExtra) {
-          return false;//为假时其它中无内容，菜单禁用
+          return false; //为假时其它中无内容，菜单禁用
         } else {
           return true;
         }
@@ -520,19 +564,20 @@ export class HelperExampleFactory {
   }
 
   // 检查摘要是否存在函数
-  static checkItemAbstract(item: Zotero.Item) { // 检查摘要
+  static checkItemAbstract(item: Zotero.Item) {
+    // 检查摘要
     if (item && !item.isNote()) {
-      if (item.isRegularItem()) { // not an attachment already
-        var abstract = item.getField('abstractNote')
-        var withabstract = abstract === '';
+      if (item.isRegularItem()) {
+        // not an attachment already
+        var abstract = item.getField("abstractNote");
+        var withabstract = abstract === "";
         if (withabstract) {
-          return false;//为假时摘要中无内容，菜单禁用
+          return false; //为假时摘要中无内容，菜单禁用
         } else {
           return true;
         }
       }
     }
-
   }
 
   // 删除条目和附件
@@ -541,7 +586,11 @@ export class HelperExampleFactory {
     var items = zoteroPane.getSelectedItems();
     // var iaInfo = items.length > 1 ? 'delete-item-and-attachment-mul' : 'delete-item-and-attachment-sig';
     // var truthBeTold = ztoolkit.getGlobal("confirm")(getString(iaInfo))
-    var truthBeTold = ztoolkit.getGlobal("confirm")(getString("delete-item-and-attachment", { args: { count: items.length } }));
+    var truthBeTold = ztoolkit.getGlobal("confirm")(
+      getString("delete-item-and-attachment", {
+        args: { count: items.length },
+      }),
+    );
     if (truthBeTold) {
       HelperExampleFactory.delAttDo(items); // 调用仅删除附件的函数
       for (let item of items) {
@@ -556,23 +605,29 @@ export class HelperExampleFactory {
 
   //删除分类条目包括附件
   static async delColItemAtt() {
-    var collection = ZoteroPane.getSelectedCollection();
-    var items = collection!.getChildItems();
-    var truthBeTold = window.confirm(getString("delete-collection-and-attachment"))
+    const collections = typeof ZoteroPane.getSelectedCollections === 'function'
+      ? ZoteroPane.getSelectedCollections()
+      : [ZoteroPane.getSelectedCollection()].filter(Boolean);
+    var truthBeTold = window.confirm(
+      getString("delete-collection-and-attachment"),
+    );
     if (truthBeTold) {
-      HelperExampleFactory.delAttDo(items);//删除条目
-      await collection!.eraseTx()
+      for (const c of collections as Zotero.Collection[]) {
+        c.deleted = true;
+        await c.saveTx({ deleteItems: true } as any);
+      }
+      BasicExampleFactory.delColItemAttSucess();
     }
-    BasicExampleFactory.delColItemAttSucess();
   }
 
   //导出分类附件
   static async colExpAtt() {
-    var collection = ZoteroPane.getSelectedCollection();
-    var items = collection!.getChildItems();
-    await HelperExampleFactory.expAttDo(items)
+    const collections = typeof ZoteroPane.getSelectedCollections === 'function'
+    ? ZoteroPane.getSelectedCollections()
+    : [ZoteroPane.getSelectedCollection()].filter(Boolean);
+    const items = collections.flatMap((c: Zotero.Collection) => c.getChildItems());
+    await HelperExampleFactory.expAttDo(items);
     // BasicExampleFactory.exortSucess(); // 导出成功提示
-
   }
 
   // 仅删除附件
@@ -582,7 +637,9 @@ export class HelperExampleFactory {
     var items = zoteroPane.getSelectedItems();
     // var daoInfo = items.length > 1 ? 'delete-attachment-only-mul' : 'delete-attachment-only-sig';
     // var truthBeTold = ztoolkit.getGlobal("confirm")(getString(daoInfo));
-    var truthBeTold = ztoolkit.getGlobal("confirm")(getString("delete-attachment-only", { args: { count: items.length } }));
+    var truthBeTold = ztoolkit.getGlobal("confirm")(
+      getString("delete-attachment-only", { args: { count: items.length } }),
+    );
 
     if (truthBeTold) {
       HelperExampleFactory.delAttDo(items); // 调用仅删除附件的函数
@@ -592,52 +649,70 @@ export class HelperExampleFactory {
 
   // 仅删除附件执行的函数
   static async delAttDo(items: Zotero.Item[]) {
-
     for (let item of items) {
-      if (item && !item.isNote()) { //2 if
-        if (item.isRegularItem()) { // Regular Item 一般条目//3 if
+      if (item && !item.isNote()) {
+        //2 if
+        if (item.isRegularItem()) {
+          // Regular Item 一般条目//3 if
           let attachmentIDs = item.getAttachments();
-          for (let id of attachmentIDs) { //4 for
+          for (let id of attachmentIDs) {
+            //4 for
             let attachment = Zotero.Items.get(id);
-            let ifLinks = (attachment.attachmentLinkMode == Zotero.Attachments.LINK_MODE_LINKED_FILE); // 检测是否为链接模式
+            let ifLinks =
+              attachment.attachmentLinkMode ==
+              Zotero.Attachments.LINK_MODE_LINKED_FILE; // 检测是否为链接模式
             var file = await attachment.getFilePathAsync();
-            if (file && ifLinks) { // 如果文件存在(文件可能已经被删除)且为链接模式删除文件
+            if (file && ifLinks) {
+              // 如果文件存在(文件可能已经被删除)且为链接模式删除文件
               try {
-                // await OS.File.remove(file); // 尝试删除文件
+                var parentDir = PathUtils.parent(file); // 得到文件父目录 文件夹
+              // await OS.File.remove(file); // 尝试删除文件
                 await Zotero.File.removeIfExists(file);
                 //await trash.remove(file);
-              } catch (error) { // 弹出错误
+              } catch (error) {
+                // 弹出错误
                 alert(getString("file-is-open"));
-                return; // 弹出错误后终止执行
+                continue; // 弹出错误后直接进入下次循环
+              }
+              try {
+                await OS.File.removeEmptyDir(parentDir);
+              } catch (e) {
+                // 目录不空时忽略，不影响主流程
               }
             }
             // if (attachment.attachmentContentType == 'text/html' ) { // 可以筛选删除的附件类型
             attachment.deleted = true; // 删除附件(快照)
             await attachment.saveTx();
             // }
-
           } //4 for
         } // 3 if
-        if (item.isAttachment()) { //附件条目 5 if
-          var ifLinksAtt = (item.attachmentLinkMode == Zotero.Attachments.LINK_MODE_LINKED_FILE); //检测是否为链接模式
+        if (item.isAttachment()) {
+          //附件条目 5 if
+          var ifLinksAtt =
+            item.attachmentLinkMode == Zotero.Attachments.LINK_MODE_LINKED_FILE; //检测是否为链接模式
           var file = await item.getFilePathAsync();
-          if (file && ifLinksAtt) { // 如果文件存在(文件可能已经被删除)且为链接模式删除文件
+          if (file && ifLinksAtt) {
+            // 如果文件存在(文件可能已经被删除)且为链接模式删除文件
             try {
+               var parentDir = PathUtils.parent(file); // 得到文件父目录 文件夹
               // await OS.File.remove(file); // 尝试删除文件
               await Zotero.File.removeIfExists(file);
-            } catch (error) { // 弹出错误
+            } catch (error) {
+              // 弹出错误
               alert(getString("file-is-open"));
-              return; // 弹出错误后终止执行
+              continue; // 弹出错误后直接进入下次循环
+            }
+            try {
+              await OS.File.removeEmptyDir(parentDir);
+            } catch (e) {
+              // 目录不空时忽略，不影响主流程
             }
           }
           item.deleted = true;
           await item.saveTx();
-        }//5if
+        } //5if
       } //2 if
-
     }
-
-
   }
   // 删除快照
   static async delSnap() {
@@ -645,16 +720,22 @@ export class HelperExampleFactory {
     var items = zoteroPane.getSelectedItems();
     // var dsInfo = items.length > 1 ? 'delete-snapshot-mul' : 'delete-snapshot-sig'
     // var truthBeTold = ztoolkit.getGlobal("confirm")(getString(dsInfo))
-    var truthBeTold = ztoolkit.getGlobal("confirm")(getString("delete-snapshot", { args: { count: items.length } }))
+    var truthBeTold = ztoolkit.getGlobal("confirm")(
+      getString("delete-snapshot", { args: { count: items.length } }),
+    );
 
     if (truthBeTold) {
       for (let item of items) {
-        if (item && !item.isNote()) { //2 if
-          if (item.isRegularItem()) { // Regular Item 一般条目//3 if
+        if (item && !item.isNote()) {
+          //2 if
+          if (item.isRegularItem()) {
+            // Regular Item 一般条目//3 if
             let attachmentIDs = item.getAttachments();
-            for (let id of attachmentIDs) { //4 for
+            for (let id of attachmentIDs) {
+              //4 for
               let attachment = Zotero.Items.get(id);
-              if (attachment.attachmentContentType == 'text/html') { //筛选删除的附件类型
+              if (attachment.attachmentContentType == "text/html") {
+                //筛选删除的附件类型
                 attachment.deleted = true; //删除附件(快照)
                 await attachment.saveTx();
                 // 快照不处理文件
@@ -663,11 +744,12 @@ export class HelperExampleFactory {
                      await OS.File.remove(file); //删除文件
                      }  */
               }
-
             } //4 for
           } // 3 if
-          if (item.isAttachment()) { //附件条目 5 if
-            if (item.attachmentContentType == 'text/html') { //筛选删除的附件类型
+          if (item.isAttachment()) {
+            //附件条目 5 if
+            if (item.attachmentContentType == "text/html") {
+              //筛选删除的附件类型
               // 快照不处理文件
               /*var file = await item.getFilePathAsync();
               if (file) { //如果文件存在，文件可能已经被删除
@@ -676,7 +758,7 @@ export class HelperExampleFactory {
               item.deleted = true;
               await item.saveTx();
             }
-          }//5if
+          } //5if
         } //2 if
       }
       BasicExampleFactory.delSnapSucess(); // 快照删除成功提示;
@@ -688,11 +770,15 @@ export class HelperExampleFactory {
     var zoteroPane = Zotero.getActiveZoteroPane();
     var items = zoteroPane.getSelectedItems();
     // var dnInfo = items.length > 1 ? 'delete-note-mul' : 'delete-note-sig';
-    var truthBeTold = window.confirm(getString("delete-note", { args: { count: items.length } }))
+    var truthBeTold = window.confirm(
+      getString("delete-note", { args: { count: items.length } }),
+    );
     if (truthBeTold) {
       for (let item of items) {
-        if (item && !item.isNote()) { //2 if
-          if (item.isRegularItem()) { // Regular Item 一般条目//3 if
+        if (item && !item.isNote()) {
+          //2 if
+          if (item.isRegularItem()) {
+            // Regular Item 一般条目//3 if
             var noteIDs = item.getNotes();
             for (let id of noteIDs) {
               await Zotero.Items.trashTx([id]);
@@ -700,17 +786,15 @@ export class HelperExampleFactory {
             //Zotero.Items.erase(item.getNotes()); //原用函数，删除笔记不可恢复
             await item.saveTx();
           } // 3 if
-
         } //2 if
-        if (item.isNote()) { //如果条目是笔记则直接删除
+        if (item.isNote()) {
+          //如果条目是笔记则直接删除
           item.deleted = true;
           await item.saveTx();
-        }//5if
-
+        } //5if
       }
       BasicExampleFactory.delNoteSucess(); // 附件笔记成功提示;
     }
-
   }
 
   // 删除其它
@@ -719,24 +803,23 @@ export class HelperExampleFactory {
     var items = zoteroPane.getSelectedItems();
     // var dnInfo = items.length > 1 ? 'delete-extra-mul' : 'delete-extra-sig';
     // var truthBeTold = window.confirm(getString(dnInfo));
-    var truthBeTold = window.confirm(getString('delete-extra', { args: { count: items.length } }));
+    var truthBeTold = window.confirm(
+      getString("delete-extra", { args: { count: items.length } }),
+    );
 
     if (truthBeTold) {
       for (let item of items) {
         if (item.isRegularItem() && !(item instanceof Zotero.Collection)) {
           try {
-            item.setField('extra', '');
+            item.setField("extra", "");
             item.save();
-
           } catch (error) {
             // numFail = numFail + 1;
           }
         }
-
       }
       BasicExampleFactory.delExtraSucess(); // 其它删除成功提示;
     }
-
   }
 
   // 删除摘要
@@ -744,54 +827,57 @@ export class HelperExampleFactory {
     var zoteroPane = Zotero.getActiveZoteroPane();
     var items = zoteroPane.getSelectedItems();
     // var dnInfo = items.length > 1 ? 'delete-abstract-mul' : 'delete-abstract-sig';
-    var truthBeTold = window.confirm(getString("delete-abstract", { args: { count: items.length } }))
+    var truthBeTold = window.confirm(
+      getString("delete-abstract", { args: { count: items.length } }),
+    );
     if (truthBeTold) {
       for (let item of items) {
         if (item.isRegularItem() && !(item instanceof Zotero.Collection)) {
           try {
-            item.setField('abstractNote', '')
+            item.setField("abstractNote", "");
             item.save();
-
           } catch (error) {
             // numFail = numFail + 1;
           }
         }
-
       }
       BasicExampleFactory.delAbstractSucess(); // 摘要删除成功提示;
     }
-
   }
 
   // 导出附件
   // 暂不能用
   static async expAtt() {
     var items = ZoteroPane.getSelectedItems();
-    await HelperExampleFactory.expAttDo(items)
+    await HelperExampleFactory.expAttDo(items);
   }
   // 导出附件执行函数
   static async expAttDo(items: Zotero.Item[]) {
     var nSucess = 0; //导出成功附件个数
     var nFail = 0; //导出失败附件个数
-    var expDir = await HelperExampleFactory.dirExp() + '\\';
+    var expDir = await HelperExampleFactory.dirExp();
     // const OS = ztoolkit.getGlobal("OS");
     for (let item of items) {
-      if (item && !item.isNote()) { //2 if
-        if (item.isRegularItem()) { // Regular Item 一般条目//3 if
+      if (item && !item.isNote()) {
+        //2 if
+        if (item.isRegularItem()) {
+          // Regular Item 一般条目//3 if
           let attachmentIDs = item.getAttachments();
-          for (let id of attachmentIDs) { //4 for
+          for (let id of attachmentIDs) {
+            //4 for
             var file = await Zotero.Items.get(id).getFilePathAsync();
             if (file) {
               try {
                 // await exportAtts(file, expDir);
 
                 var baseName = PathUtils.filename(file); //得到文件名
-                var destName = PathUtils.join(expDir, baseName);
+                var destName = PathUtils.join(expDir as string, baseName);
                 IOUtils.copy(file, destName); // 尝试导出文件
                 nSucess++;
                 //BasicExampleFactory.exortSucess(); // 导出成功提示
-              } catch (error) { // 弹出错误
-                alert('error export');
+              } catch (error) {
+                // 弹出错误
+                alert("error export");
                 return; // 弹出错误后终止执行
               }
             } else {
@@ -800,17 +886,15 @@ export class HelperExampleFactory {
             }
           } //4 for
         } // 3 if
-        if (item.isAttachment()) { //附件条目 5 if
+        if (item.isAttachment()) {
+          //附件条目 5 if
           var file = await item.getFilePathAsync();
           if (file) {
             try {
               // await exportAtts(file, expDir);
 
-              // var baseName = OS.Path.basename(file); //得到文件名
-              // var destName = OS.Path.join(expDir, baseName);
-              // OS.File.copy(file, destName); // 尝试导出文件
               var baseName = PathUtils.filename(file); //得到文件名
-              var destName = PathUtils.join(expDir, baseName);
+              var destName = PathUtils.join(expDir as string, baseName);
               IOUtils.copy(file, destName); // 尝试导出文件
               // OS.Path.join(replacement: PathUtils.join ? joinRelative ?)
               // OS.Path.basename(replacement: PathUtils.filename)
@@ -818,21 +902,20 @@ export class HelperExampleFactory {
               // await IOUtils.copy(srcPath, destPath);
               nSucess++;
               //BasicExampleFactory.exortSucess(); // 导出成功提示
-
-            } catch (error) { // 弹出错误
-              alert('error export');
+            } catch (error) {
+              // 弹出错误
+              alert("error export");
               return; // 弹出错误后终止执行
             }
           } else {
             nFail++;
             // // 导出失败提示
           }
-        }//5if
+        } //5if
       } //2 if
     }
-    BasicExampleFactory.exortSucess(nSucess)
+    BasicExampleFactory.exortSucess(nSucess);
     BasicExampleFactory.exortFail(nFail);
-
   }
 
   // 选择存贮路径
@@ -840,9 +923,11 @@ export class HelperExampleFactory {
   static async dirExp() {
     const path = await new ztoolkit.FilePicker(
       getString("exort-dir"),
-      "folder"
-
+      "folder",
     ).open();
+    if (!path) {
+      throw new Error("No directory selected");
+    }
     return path;
     // ztoolkit.getGlobal("alert")(`Selected ${path}`);
   }
@@ -855,25 +940,36 @@ export class HelperExampleFactory {
     var pattern = new RegExp("[\u4E00-\u9FA5]+");
     for (let item of items) {
       var title = String(item.getField("title"));
-      if (Zotero.ItemTypes.getName(item.itemTypeID) == 'computerProgram' // 文献类型为软件时返回
+      if (
+        Zotero.ItemTypes.getName(item.itemTypeID) == "computerProgram" // 文献类型为软件时返回
       ) {
         continue;
       }
-      var lan = pattern.test(title) ? 'zh-CN' : 'en-US';
+      var lan = pattern.test(title) ? "zh-CN" : "en-US";
       try {
-        if (item && !item.isNote() && item.isRegularItem() &&
-          Zotero.ItemTypes.getName(item.itemTypeID) != 'computerProgram') { //正常条目，非笔记设置语言
+        if (
+          item &&
+          !item.isNote() &&
+          item.isRegularItem() &&
+          Zotero.ItemTypes.getName(item.itemTypeID) != "computerProgram"
+        ) {
+          //正常条目，非笔记设置语言
           item.setField("language", lan);
           await item.saveTx();
         }
-
       } catch (error) {
-        Zotero.debug(`语言设置失败，可能条目类型${Zotero.ItemTypes.getName(item.itemTypeID)}不能设置语言。`)
+        Zotero.debug(
+          `语言设置失败，可能条目类型${Zotero.ItemTypes.getName(item.itemTypeID)}不能设置语言。`,
+        );
       }
-
     }
-    if (items.every((item) => // 如果都是软件提示错误
-      Zotero.ItemTypes.getName(item.itemTypeID) == 'computerProgram')) {
+    if (
+      items.every(
+        (
+          item, // 如果都是软件提示错误
+        ) => Zotero.ItemTypes.getName(item.itemTypeID) == "computerProgram",
+      )
+    ) {
       BasicExampleFactory.softLanFail();
     } else {
       BasicExampleFactory.lanSetSucess(); // 语言设置成功提示;
